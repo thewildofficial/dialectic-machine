@@ -66,15 +66,15 @@ function KanbanBoard({ entries, onSelect, selectedEntry, onOpen }) {
 
   return (
     <div
-      className="h-full overflow-x-auto overflow-y-hidden p-4 font-mono"
+      className="h-full overflow-x-auto overflow-y-hidden px-3 py-4 sm:px-4 sm:py-5 lg:px-6 lg:py-6 font-mono"
       onKeyDown={handleKeyDown}
     >
-      <div className="flex gap-4 h-full min-w-max">
+      <div className="flex gap-3 sm:gap-4 lg:gap-6 h-full min-w-max">
         {columns.map((column, colIdx) => (
           <div
             key={column.type}
             className={`
-              w-72 flex flex-col border rounded transition-colors
+              w-[17.5rem] sm:w-72 lg:w-80 flex flex-col border rounded transition-colors
               ${colIdx === activeColumn
                 ? 'border-accent/50'
                 : 'border-border'
@@ -83,7 +83,7 @@ function KanbanBoard({ entries, onSelect, selectedEntry, onOpen }) {
           >
             {/* Column header */}
             <div className={`
-              px-3 py-2 border-b border-border flex items-center gap-2
+              px-4 py-3 border-b border-border flex items-center gap-3
               ${colIdx === activeColumn ? 'bg-accent/5' : ''}
             `}>
               <TypeIndicator type={column.type} />
@@ -96,7 +96,7 @@ function KanbanBoard({ entries, onSelect, selectedEntry, onOpen }) {
             </div>
 
             {/* Column entries */}
-            <div className="flex-1 overflow-y-auto p-2 space-y-2">
+            <div className="flex-1 overflow-y-auto p-3 sm:p-4 space-y-3">
               {column.entries.map((entry, entryIdx) => {
                 const isSelected = selectedEntry?.id === entry.id
                 const isActive = colIdx === activeColumn && entryIdx === activeIndex
@@ -107,7 +107,7 @@ function KanbanBoard({ entries, onSelect, selectedEntry, onOpen }) {
                     onClick={() => handleCardClick(entry)}
                     onDoubleClick={() => handleCardDoubleClick(entry)}
                     className={`
-                      w-full text-left p-3 rounded border transition-colors
+                      w-full text-left p-4 rounded border transition-colors
                       ${isSelected
                         ? 'bg-selection border-accent/50'
                         : isActive
@@ -116,11 +116,11 @@ function KanbanBoard({ entries, onSelect, selectedEntry, onOpen }) {
                       }
                     `}
                   >
-                    <p className="text-sm text-fg leading-relaxed mb-2">
+                    <p className="text-sm text-fg leading-relaxed whitespace-pre-line break-words mb-3">
                       {truncate(entry.content, 100)}
                     </p>
                     {entry.tags && entry.tags.length > 0 && (
-                      <div className="flex gap-1 flex-wrap">
+                      <div className="flex gap-2 flex-wrap">
                         {entry.tags.slice(0, 3).map((tag, i) => (
                           <TagPill key={i} tag={tag} />
                         ))}

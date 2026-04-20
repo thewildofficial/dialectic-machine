@@ -3,15 +3,27 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from '../lib/constants'
 
 // Initialize Supabase client with placeholder credentials
 // User must replace these with their actual Supabase project credentials
-export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
+export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+  auth: {
+    persistSession: true,
+    autoRefreshToken: true,
+  },
+})
 
 /**
  * Fetch all entries for the current user
  */
 export async function fetchEntries() {
+  const { data: { user } } = await supabase.auth.getUser()
+
+  if (!user) {
+    return []
+  }
+
   const { data, error } = await supabase
     .from('entries')
     .select('*')
+    .eq('user_id', user.id)
     .order('created_at', { ascending: false })
 
   if (error) {
@@ -26,9 +38,17 @@ export async function fetchEntries() {
  * Create a new entry
  */
 export async function createEntry(entry) {
+  // Get current user to associate entry with
+  const { data: { user } } = await supabase.auth.getUser()
+
+  if (!user) {
+    throw new Error('You must be logged in to create entries')
+  }
+
   const { data, error } = await supabase
     .from('entries')
     .insert({
+      user_id: user.id,
       content: entry.content,
       source: entry.source || null,
       url: entry.url || null,
@@ -41,7 +61,7 @@ export async function createEntry(entry) {
 
   if (error) {
     console.error('Error creating entry:', error)
-    return null
+    throw new Error(`Failed to save entry: ${error.message}`)
   }
 
   return data
@@ -51,6 +71,12 @@ export async function createEntry(entry) {
  * Update an existing entry
  */
 export async function updateEntry(id, updates) {
+  const { data: { user } } = await supabase.auth.getUser()
+
+  if (!user) {
+    throw new Error('You must be logged in to update entries')
+  }
+
   const { data, error } = await supabase
     .from('entries')
     .update({
@@ -58,12 +84,13 @@ export async function updateEntry(id, updates) {
       updated_at: new Date().toISOString(),
     })
     .eq('id', id)
+    .eq('user_id', user.id)
     .select()
     .single()
 
   if (error) {
     console.error('Error updating entry:', error)
-    return null
+    throw new Error(`Failed to update entry: ${error.message}`)
   }
 
   return data
@@ -73,14 +100,21 @@ export async function updateEntry(id, updates) {
  * Delete an entry
  */
 export async function deleteEntry(id) {
+  const { data: { user } } = await supabase.auth.getUser()
+
+  if (!user) {
+    throw new Error('You must be logged in to delete entries')
+  }
+
   const { error } = await supabase
     .from('entries')
     .delete()
     .eq('id', id)
+    .eq('user_id', user.id)
 
   if (error) {
     console.error('Error deleting entry:', error)
-    return false
+    throw new Error(`Failed to delete entry: ${error.message}`)
   }
 
   return true
@@ -118,6 +152,25 @@ export async function signIn(email, password) {
   }
 
   return { user: data.user, error: null }
+}
+
+/**
+ * Sign in with Google via OAuth
+ */
+export async function signInWithGoogle() {
+  const { data, error } = await supabase.auth.signInWithOAuth({
+    provider: 'google',
+    options: {
+      redirectTo: window.location.origin + '/auth/callback',
+    },
+  })
+
+  if (error) {
+    console.error('Error signing in with Google:', error)
+    return { user: null, error }
+  }
+
+  return { user: data.user, url: data.url, error: null }
 }
 
 /**

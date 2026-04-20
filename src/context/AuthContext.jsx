@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react'
-import { supabase, onAuthStateChange, getSession } from '../services/supabase'
+import { supabase, onAuthStateChange, getSession, signInWithGoogle } from '../services/supabase'
 
 const AuthContext = createContext(null)
 
@@ -73,6 +73,7 @@ export function AuthProvider({ children }) {
     signIn,
     signUp,
     signOut,
+    signInWithGoogle,
     isAuthenticated: !!user,
   }
 

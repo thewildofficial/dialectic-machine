@@ -10,6 +10,7 @@ function TmuxStatusBar({ entryCount, tagCount, currentView, showTags }) {
     list: 'list',
     kanban: 'kanban',
     timeline: 'timeline',
+    graph: 'graph',
   }
 
   return (

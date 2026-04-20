@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { ENTRY_TYPES, TYPE_KEYS } from '../lib/constants'
 import { classifyEntry } from '../services/classifier'
 import { parseTags, formatTags } from '../lib/utils'
+import AiAssistButton from './AiAssistButton'
 
 /**
  * Entry form overlay for creating and editing entries
@@ -22,6 +23,7 @@ function EntryForm({
   const [commentary, setCommentary] = useState(entry?.commentary || '')
   const [manuallySelectedType, setManuallySelectedType] = useState(false)
   const [saving, setSaving] = useState(false)
+  const [saveError, setSaveError] = useState(null)
 
   const contentRef = useRef(null)
   const formRef = useRef(null)
@@ -47,12 +49,51 @@ function EntryForm({
     setManuallySelectedType(true)
   }, [])
 
+  // Handle AI suggestions
+  const handleAiSuggestions = useCallback((suggestions) => {
+    // If AI provided content (from clipboard paste mode), set it
+    if (suggestions.content && !content.trim()) {
+      setContent(suggestions.content)
+    }
+
+    // Set type if valid
+    const validTypes = ['claim', 'question', 'idea', 'quote', 'reference', 'opinion', 'task', 'reflection']
+    if (suggestions.type && validTypes.includes(suggestions.type)) {
+      setType(suggestions.type)
+      setManuallySelectedType(true)
+    }
+
+    // Set source if provided and current is empty
+    if (suggestions.source && !source.trim()) {
+      setSource(suggestions.source)
+    }
+
+    // Set URL if provided and current is empty
+    if (suggestions.url && !url.trim()) {
+      setUrl(suggestions.url)
+    }
+
+    // Set tags (append to existing if any)
+    if (suggestions.tags && suggestions.tags.length > 0) {
+      const existingTags = parseTags(tags)
+      const newTags = [...new Set([...existingTags, ...suggestions.tags])]
+      setTags(formatTags(newTags))
+    }
+
+    // Set commentary if provided and current is empty
+    if (suggestions.commentary && !commentary.trim()) {
+      setCommentary(suggestions.commentary)
+    }
+  }, [content, source, url, tags, commentary])
+
   // Save handler
   const handleSave = useCallback(async () => {
     if (!content.trim()) return
 
     setSaving(true)
-    await onSave({
+    setSaveError(null)
+
+    const result = await onSave({
       id: entry?.id,
       content: content.trim(),
       source: source.trim() || null,
@@ -61,7 +102,12 @@ function EntryForm({
       tags: parseTags(tags),
       commentary: commentary.trim() || null,
     })
+
     setSaving(false)
+
+    if (!result) {
+      setSaveError('Failed to save. Check console for details.')
+    }
   }, [content, source, url, type, tags, commentary, entry, onSave])
 
   // Keyboard shortcuts
@@ -95,17 +141,17 @@ function EntryForm({
         className="bg-bg border border-border rounded w-full max-w-2xl max-h-[90vh] overflow-y-auto font-mono fade-in"
       >
         {/* Header */}
-        <div className="border-b border-border px-4 py-2 flex items-center">
+        <div className="border-b border-border px-5 py-4 sm:px-6 sm:py-5 flex items-center">
           <span className="text-accent text-sm font-semibold">
             {isEditing ? '[edit entry]' : '[new entry]'}
           </span>
         </div>
 
         {/* Form fields */}
-        <div className="p-4 space-y-4">
+        <div className="px-5 py-5 sm:px-6 sm:py-6 space-y-6">
           {/* Type */}
           <div>
-            <label className="text-dim text-sm block mb-1">type:</label>
+            <label className="text-dim text-sm block mb-2">type:</label>
             <select
               value={type}
               onChange={handleTypeChange}
@@ -121,7 +167,14 @@ function EntryForm({
 
           {/* Content */}
           <div>
-            <label className="text-dim text-sm block mb-1">content:</label>
+            <div className="flex items-center justify-between mb-2">
+              <label className="text-dim text-sm">content:</label>
+              <AiAssistButton
+                onSuggestions={handleAiSuggestions}
+                content={content}
+                context={commentary}
+              />
+            </div>
             <textarea
               ref={contentRef}
               value={content}
@@ -129,13 +182,13 @@ function EntryForm({
               onBlur={handleContentBlur}
               rows={5}
               className="w-full bg-bg/50 border border-border rounded px-3 py-2 text-fg font-mono text-sm resize-none focus:border-accent outline-none"
-              placeholder="What did you read, hear, or think?"
+              placeholder="Paste a quote or thought here, then click [AI: analyze quote] to auto-fill metadata..."
             />
           </div>
 
           {/* Source */}
           <div>
-            <label className="text-dim text-sm block mb-1">source:</label>
+            <label className="text-dim text-sm block mb-2">source:</label>
             <input
               type="text"
               value={source}
@@ -147,7 +200,7 @@ function EntryForm({
 
           {/* URL */}
           <div>
-            <label className="text-dim text-sm block mb-1">url:</label>
+            <label className="text-dim text-sm block mb-2">url:</label>
             <input
               type="url"
               value={url}
@@ -159,7 +212,7 @@ function EntryForm({
 
           {/* Tags */}
           <div>
-            <label className="text-dim text-sm block mb-1">tags:</label>
+            <label className="text-dim text-sm block mb-2">tags:</label>
             <input
               type="text"
               value={tags}
@@ -171,7 +224,7 @@ function EntryForm({
 
           {/* Commentary */}
           <div>
-            <label className="text-dim text-sm block mb-1">commentary:</label>
+            <label className="text-dim text-sm block mb-2">commentary:</label>
             <textarea
               value={commentary}
               onChange={(e) => setCommentary(e.target.value)}
@@ -182,8 +235,15 @@ function EntryForm({
           </div>
         </div>
 
+        {/* Error message */}
+        {saveError && (
+          <div className="border-t border-border px-5 py-3 sm:px-6 sm:py-4 bg-red-900/20">
+            <p className="text-red-400 text-sm text-center">{saveError}</p>
+          </div>
+        )}
+
         {/* Actions */}
-        <div className="border-t border-border px-4 py-3 flex items-center justify-center gap-4">
+        <div className="border-t border-border px-5 py-4 sm:px-6 sm:py-5 flex items-center justify-center gap-5">
           <button
             onClick={handleSave}
             disabled={saving || !content.trim()}

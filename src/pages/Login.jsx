@@ -1,6 +1,7 @@
 import React, { useState, useCallback } from 'react'
 import { useNavigate, Navigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
+import HEGEL from '../assets/HEGEL.txt?raw'
 
 /**
  * Login page with email/password auth
@@ -13,7 +14,7 @@ function Login() {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
-  const { signIn, signUp, isAuthenticated } = useAuth()
+  const { signIn, signUp, signInWithGoogle, isAuthenticated } = useAuth()
   const navigate = useNavigate()
 
   // Redirect if already authenticated
@@ -44,39 +45,92 @@ function Login() {
 
       if (result.error) {
         setError(result.error.message)
-      } else {
-        navigate('/app')
+        setLoading(false)
+        return
       }
+
+      if (!result.user) {
+        setError('authentication failed - no user returned')
+        setLoading(false)
+        return
+      }
+
+      navigate('/app')
     } catch (err) {
       setError(err.message || 'an unexpected error occurred')
-    } finally {
       setLoading(false)
     }
   }, [email, password, isSignUp, signIn, signUp, navigate])
 
+  const handleGoogleSignIn = useCallback(async () => {
+    setError('')
+    setLoading(true)
+
+    try {
+      const result = await signInWithGoogle()
+      if (result.error) {
+        setError(result.error.message)
+        setLoading(false)
+      }
+    } catch (err) {
+      setError(err.message || 'an unexpected error occurred')
+      setLoading(false)
+    }
+  }, [signInWithGoogle])
+
   return (
-    <div className="h-screen w-screen bg-bg flex items-center justify-center font-mono p-4">
-      <div className="w-full max-w-md">
-        {/* Header */}
-        <div className="text-center mb-8">
-          <h1 className="text-fg text-lg font-semibold mb-1">
-            discourse
-          </h1>
-          <p className="text-dim text-sm">
-            {isSignUp ? 'create an account' : 'sign in to continue'}
-          </p>
+    <div className="h-screen w-screen bg-bg flex items-center justify-center font-mono p-6">
+      <div className="w-full max-w-xl">
+        <div className="flex flex-col items-center text-center">
+          <div className="text-dim text-[6px] leading-[0.8] select-none sm:text-[7px] md:text-[8px]">
+            <pre className="text-center">{HEGEL}</pre>
+          </div>
+
+          <div className="h-8 sm:h-10 md:h-12" />
+
+          {/* Header */}
+          <div className="space-y-3">
+            <h1 className="text-fg text-lg font-semibold">
+            dialectical machine
+            </h1>
+            <p className="text-dim text-sm">
+              {isSignUp ? 'create an account' : 'sign in to continue'}
+            </p>
+          </div>
+
+          <div className="h-8 sm:h-10 md:h-12" />
         </div>
 
-        {/* Form */}
-        <form onSubmit={handleSubmit} className="border border-border rounded p-6 space-y-4">
+        <button
+          type="button"
+          onClick={handleGoogleSignIn}
+          disabled={loading}
+          className={`
+            w-full py-3 rounded text-sm font-mono transition-colors border border-border
+            ${loading
+              ? 'text-dim cursor-not-allowed'
+              : 'text-accent hover:bg-accent/10 cursor-pointer'
+            }
+          `}
+        >
+          [ sign in with google ]
+        </button>
+
+        <div className="my-8 flex items-center sm:my-10">
+          <div className="flex-1 border-t border-border"></div>
+          <span className="px-3 text-dim text-xs">or</span>
+          <div className="flex-1 border-t border-border"></div>
+        </div>
+
+        <form onSubmit={handleSubmit} className="border border-border rounded p-8 space-y-6 sm:p-10">
           {/* Email */}
           <div>
-            <label className="text-dim text-sm block mb-1">email:</label>
+            <label className="text-dim text-sm block mb-2">email:</label>
             <input
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full bg-bg/50 border border-border rounded px-3 py-2 text-fg font-mono text-sm focus:border-accent outline-none"
+              className="w-full bg-bg/50 border border-border rounded px-3 py-3 text-fg font-mono text-sm focus:border-accent outline-none"
               placeholder="you@example.com"
               autoComplete="email"
               autoFocus
@@ -85,12 +139,12 @@ function Login() {
 
           {/* Password */}
           <div>
-            <label className="text-dim text-sm block mb-1">password:</label>
+            <label className="text-dim text-sm block mb-2">password:</label>
             <input
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full bg-bg/50 border border-border rounded px-3 py-2 text-fg font-mono text-sm focus:border-accent outline-none"
+              className="w-full bg-bg/50 border border-border rounded px-3 py-3 text-fg font-mono text-sm focus:border-accent outline-none"
               placeholder="••••••••"
               autoComplete={isSignUp ? 'new-password' : 'current-password'}
             />
@@ -108,7 +162,7 @@ function Login() {
             type="submit"
             disabled={loading}
             className={`
-              w-full py-2 rounded text-sm font-mono transition-colors
+              w-full py-3 rounded text-sm font-mono transition-colors
               ${loading
                 ? 'text-dim cursor-not-allowed'
                 : 'text-accent hover:bg-accent/10 cursor-pointer'
@@ -119,7 +173,7 @@ function Login() {
           </button>
 
           {/* Toggle sign in/sign up */}
-          <div className="text-center pt-2">
+          <div className="text-center pt-6">
             <button
               type="button"
               onClick={() => {
@@ -137,7 +191,7 @@ function Login() {
         </form>
 
         {/* Footer */}
-        <div className="text-center mt-6 text-dim text-xs">
+        <div className="text-center mt-10 text-dim text-xs sm:mt-12">
           <p>press enter to submit</p>
         </div>
       </div>

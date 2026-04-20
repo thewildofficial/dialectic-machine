@@ -18,6 +18,7 @@ export const VIEWS = {
   LIST: 'list',
   KANBAN: 'kanban',
   TIMELINE: 'timeline',
+  GRAPH: 'graph',
 }
 
 export const VIEW_KEYS = Object.values(VIEWS)

@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo, useRef } from 'react'
+import React, { useState, useCallback, useMemo, useRef, lazy, Suspense } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { useEntries } from '../context/EntriesContext'
@@ -14,11 +14,15 @@ import EntryCard from '../components/EntryCard'
 import EntryDetail from '../components/EntryDetail'
 import EntryForm from '../components/EntryForm'
 import FilterBar from '../components/FilterBar'
-import KanbanBoard from '../components/KanbanBoard'
-import TimelineView from '../components/TimelineView'
 import CommandPalette from '../components/CommandPalette'
 import ConfirmDialog from '../components/ConfirmDialog'
 import TagPill from '../components/TagPill'
+import GeminiSettings from '../components/GeminiSettings'
+
+// Lazy-loaded heavy views
+const KanbanBoard = lazy(() => import('../components/KanbanBoard'))
+const TimelineView = lazy(() => import('../components/TimelineView'))
+const GraphView = lazy(() => import('../components/GraphView'))
 
 import { VIEWS, TYPE_KEYS } from '../lib/constants'
 
@@ -39,7 +43,9 @@ function App() {
     filterType,
     setFilterType,
     filterTags,
-    toggleTag,
+    relatedTagSource,
+    relatedTagCluster,
+    showRelatedByTag,
     clearFilters,
     hasActiveFilters,
   } = useFilteredEntries()
@@ -54,6 +60,7 @@ function App() {
   const [showTags, setShowTags] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(null)
   const [showPalette, setShowPalette] = useState(false)
+  const [showSettings, setShowSettings] = useState(false)
 
   const searchInputRef = useRef(null)
 
@@ -62,6 +69,7 @@ function App() {
     setCurrentView(prev => {
       if (prev === VIEWS.LIST) return VIEWS.KANBAN
       if (prev === VIEWS.KANBAN) return VIEWS.TIMELINE
+      if (prev === VIEWS.TIMELINE) return VIEWS.GRAPH
       return VIEWS.LIST
     })
   }, [])
@@ -92,13 +100,16 @@ function App() {
   }, [])
 
   const handleSave = useCallback(async (entryData) => {
-    if (editingEntry?.id) {
-      await editEntry(editingEntry.id, entryData)
-    } else {
-      await addEntry(entryData)
+    const result = editingEntry?.id
+      ? await editEntry(editingEntry.id, entryData)
+      : await addEntry(entryData)
+
+    if (result) {
+      setShowForm(false)
+      setEditingEntry(null)
     }
-    setShowForm(false)
-    setEditingEntry(null)
+
+    return result
   }, [editingEntry, addEntry, editEntry])
 
   const handleFormCancel = useCallback(() => {
@@ -146,9 +157,24 @@ function App() {
   }, [])
 
   const handleTagClick = useCallback((tag) => {
-    toggleTag(tag)
+    showRelatedByTag(tag)
+    setCurrentView(VIEWS.LIST)
     setShowFilter(true)
-  }, [toggleTag])
+  }, [showRelatedByTag])
+
+  const handleSourceClick = useCallback((source) => {
+    const normalizedSource = (source || '').trim()
+    if (!normalizedSource) return
+
+    // Prefer the author segment when source follows "Author - Work" style.
+    const authorSegment = normalizedSource.split(/\s[-—]\s/)[0]?.trim() || normalizedSource
+    const referenceQuery = authorSegment || normalizedSource
+
+    clearFilters()
+    setSearchQuery(referenceQuery)
+    setCurrentView(VIEWS.LIST)
+    setShowFilter(true)
+  }, [clearFilters, setSearchQuery])
 
   // Quit handler
   const handleQuit = useCallback(async () => {
@@ -194,6 +220,14 @@ function App() {
     console.log('theme toggle not yet implemented')
   }, [])
 
+  const handleOpenSettings = useCallback(() => {
+    setShowSettings(true)
+  }, [])
+
+  const handleCloseSettings = useCallback(() => {
+    setShowSettings(false)
+  }, [])
+
   const {
     isOpen: paletteOpen,
     query: paletteQuery,
@@ -211,6 +245,7 @@ function App() {
     onLogout: handleQuit,
     onToggleFilter: handleToggleFilter,
     onToggleTags: handleToggleTags,
+    onOpenSettings: handleOpenSettings,
   })
 
   // Keyboard navigation
@@ -232,6 +267,7 @@ function App() {
     showForm,
     showDetail,
     showPalette: paletteOpen,
+    showConfirmDialog: !!confirmDelete,
   })
 
   // Get related entries (entries sharing tags with selected)
@@ -272,7 +308,13 @@ function App() {
       {/* Main content area */}
       <div className="flex flex-1 overflow-hidden">
         {/* Left side: list + filter */}
-        <div className="flex flex-col flex-1 lg:flex-none lg:w-[35%] min-w-0 border-r border-border">
+        <div className={`
+          flex flex-col flex-1 min-w-0 border-r border-border
+          ${currentView === VIEWS.GRAPH
+            ? 'lg:flex-none lg:w-[60%] xl:w-[62%]'
+            : 'lg:flex-none lg:w-[38%] xl:w-[36%]'
+          }
+        `}>
           {/* Filter bar */}
           {showFilter && (
             <FilterBar
@@ -280,6 +322,8 @@ function App() {
               onSearchChange={setSearchQuery}
               filterType={filterType}
               onTypeChange={setFilterType}
+              relatedTagSource={relatedTagSource}
+              relatedTagCluster={relatedTagCluster}
               onClear={clearFilters}
               hasActiveFilters={hasActiveFilters}
               searchInputRef={searchInputRef}
@@ -290,7 +334,7 @@ function App() {
           <div className="flex-1 overflow-y-auto">
             {currentView === VIEWS.LIST && (
               filteredEntries.length === 0 ? (
-                <div className="text-dim text-center mt-20 p-4">
+                <div className="text-dim text-center mt-20 px-5 py-6 sm:px-6 sm:py-8">
                   <p className="text-sm mb-2">
                     {hasActiveFilters ? 'no entries match filters' : 'no entries yet'}
                   </p>
@@ -311,37 +355,65 @@ function App() {
             )}
 
             {currentView === VIEWS.KANBAN && (
-              <KanbanBoard
-                entries={filteredEntries}
-                onSelect={handleSelect}
-                selectedEntry={selectedEntry}
-                onOpen={handleOpen}
-              />
+              <Suspense fallback={
+                <div className="text-dim text-center mt-20 px-5 py-6 sm:px-6 sm:py-8">
+                  <p className="text-sm">loading kanban view...</p>
+                </div>
+              }>
+                <KanbanBoard
+                  entries={filteredEntries}
+                  onSelect={handleSelect}
+                  selectedEntry={selectedEntry}
+                  onOpen={handleOpen}
+                />
+              </Suspense>
             )}
 
             {currentView === VIEWS.TIMELINE && (
-              <TimelineView
-                entries={filteredEntries}
-                onSelect={handleSelect}
-                selectedEntry={selectedEntry}
-                onOpen={handleOpen}
-              />
+              <Suspense fallback={
+                <div className="text-dim text-center mt-20 px-5 py-6 sm:px-6 sm:py-8">
+                  <p className="text-sm">loading timeline view...</p>
+                </div>
+              }>
+                <TimelineView
+                  entries={filteredEntries}
+                  onSelect={handleSelect}
+                  selectedEntry={selectedEntry}
+                  onOpen={handleOpen}
+                />
+              </Suspense>
+            )}
+
+            {currentView === VIEWS.GRAPH && (
+              <Suspense fallback={
+                <div className="text-dim text-center mt-20 px-5 py-6 sm:px-6 sm:py-8">
+                  <p className="text-sm">loading graph view...</p>
+                </div>
+              }>
+                <GraphView
+                  entries={filteredEntries}
+                  onSelect={handleSelect}
+                  selectedEntry={selectedEntry}
+                  onOpen={handleOpen}
+                />
+              </Suspense>
             )}
           </div>
         </div>
 
         {/* Right side: detail view (desktop) */}
         <div className="hidden lg:flex flex-1 flex-col">
-          {showDetail && selectedEntry ? (
+          {selectedEntry ? (
             <EntryDetail
               entry={selectedEntry}
               onClose={() => setShowDetail(false)}
               relatedEntries={relatedEntries}
               onTagClick={handleTagClick}
+              onSourceClick={handleSourceClick}
             />
           ) : (
             <div className="flex-1 flex items-center justify-center text-dim">
-              <div className="text-center">
+              <div className="text-center px-6 py-8">
                 <p className="text-sm mb-2">no entry selected</p>
                 <p className="text-xs">press enter to open an entry</p>
               </div>
@@ -351,15 +423,15 @@ function App() {
 
         {/* Tag sidebar (toggleable) */}
         {showTags && (
-          <div className="hidden lg:block w-48 border-l border-border overflow-y-auto p-3">
-            <div className="text-dim text-xs mb-3 font-semibold">tags</div>
-            <div className="space-y-1.5">
+          <div className="hidden lg:block w-52 border-l border-border overflow-y-auto px-4 py-5">
+            <div className="text-dim text-xs mb-4 font-semibold">tags</div>
+            <div className="space-y-2.5">
               {allTags.map(tag => (
                 <TagPill
                   key={tag}
                   tag={tag}
                   active={filterTags.includes(tag)}
-                  onClick={() => toggleTag(tag)}
+                  onClick={() => handleTagClick(tag)}
                   count={tagCounts[tag]}
                 />
               ))}
@@ -386,6 +458,7 @@ function App() {
                 onClose={() => setShowDetail(false)}
                 relatedEntries={relatedEntries}
                 onTagClick={handleTagClick}
+                onSourceClick={handleSourceClick}
               />
             </div>
           </div>
@@ -425,6 +498,11 @@ function App() {
           confirmLabel="delete"
           cancelLabel="cancel"
         />
+      )}
+
+      {/* AI Settings */}
+      {showSettings && (
+        <GeminiSettings onClose={handleCloseSettings} />
       )}
     </div>
   )

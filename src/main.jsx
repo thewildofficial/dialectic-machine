@@ -10,6 +10,7 @@ import ProtectedRoute from './components/ProtectedRoute'
 import Landing from './pages/Landing'
 import Login from './pages/Login'
 import AppPage from './pages/App'
+import AuthCallback from './pages/AuthCallback'
 
 // Styles
 import './index.css'
@@ -37,6 +38,7 @@ function AppRoutes() {
     <Routes>
       <Route path="/" element={<Landing />} />
       <Route path="/login" element={<Login />} />
+      <Route path="/auth/callback" element={<AuthCallback />} />
       <Route
         path="/app"
         element={

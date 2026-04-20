@@ -23,6 +23,7 @@ export function useKeyboardNav({
   showForm,
   showDetail,
   showPalette,
+  showConfirmDialog,
 }) {
   const [selectedIndex, setSelectedIndex] = useState(0)
   const listRef = useRef(null)
@@ -97,8 +98,8 @@ export function useKeyboardNav({
     // Don't handle other shortcuts when typing
     if (isInput) return
 
-    // Don't handle shortcuts when form or palette is open
-    if (showForm || showPalette) return
+    // Don't handle shortcuts when overlays are open
+    if (showForm || showPalette || showConfirmDialog) return
 
     switch (e.key) {
       case 'j':
@@ -172,6 +173,7 @@ export function useKeyboardNav({
     showDetail,
     showForm,
     showPalette,
+    showConfirmDialog,
     moveUp,
     moveDown,
     openEntry,

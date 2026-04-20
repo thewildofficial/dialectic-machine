@@ -44,11 +44,15 @@ export function EntriesProvider({ children, userId }) {
       tags: entryData.tags || [],
     }
 
-    const created = await createEntry(newEntry)
-    if (created) {
+    try {
+      const created = await createEntry(newEntry)
       setEntries(prev => [created, ...prev])
+      setError(null)
+      return created
+    } catch (err) {
+      setError(err.message || 'Failed to save entry. Please try again.')
+      return null
     }
-    return created
   }, [])
 
   const editEntry = useCallback(async (id, updates) => {
@@ -58,19 +62,27 @@ export function EntriesProvider({ children, userId }) {
       updates.type = classifyEntry(updates.content, updates.url || existing?.url)
     }
 
-    const updated = await updateEntry(id, updates)
-    if (updated) {
+    try {
+      const updated = await updateEntry(id, updates)
       setEntries(prev => prev.map(e => e.id === id ? updated : e))
+      setError(null)
+      return updated
+    } catch (err) {
+      setError(err.message || 'Failed to update entry. Please try again.')
+      return null
     }
-    return updated
   }, [entries])
 
   const removeEntry = useCallback(async (id) => {
-    const success = await deleteEntry(id)
-    if (success) {
+    try {
+      await deleteEntry(id)
       setEntries(prev => prev.filter(e => e.id !== id))
+      setError(null)
+      return true
+    } catch (err) {
+      setError(err.message || 'Failed to delete entry. Please try again.')
+      return false
     }
-    return success
   }, [])
 
   const getEntryById = useCallback((id) => {

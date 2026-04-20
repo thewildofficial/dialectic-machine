@@ -10,7 +10,7 @@ function TimelineView({ entries, onSelect, selectedEntry, onOpen }) {
   const groups = groupByMonth(entries)
 
   return (
-    <div className="h-full overflow-y-auto p-6 font-mono">
+    <div className="h-full overflow-y-auto px-4 py-5 sm:px-6 sm:py-6 lg:px-8 lg:py-8 font-mono">
       {groups.length === 0 ? (
         <div className="text-dim text-center mt-20">
           <p className="text-lg mb-2">no entries yet</p>
@@ -18,9 +18,9 @@ function TimelineView({ entries, onSelect, selectedEntry, onOpen }) {
         </div>
       ) : (
         groups.map((group) => (
-          <div key={group.label} className="mb-8">
+          <div key={group.label} className="mb-10">
             {/* Month header */}
-            <div className="flex items-center gap-3 mb-4">
+            <div className="flex items-center gap-3 mb-5">
               <span className="text-accent text-sm font-semibold">
                 ─── {group.label} ───
               </span>
@@ -30,20 +30,21 @@ function TimelineView({ entries, onSelect, selectedEntry, onOpen }) {
             </div>
 
             {/* Entries for this month */}
-            <div className="space-y-1 ml-4">
+            <div className="space-y-2 ml-2 sm:ml-4">
               {group.entries.map((entry) => {
                 const isSelected = selectedEntry?.id === entry.id
 
                 return (
                   <button
                     key={entry.id}
+                    type="button"
                     onClick={() => onSelect(entry)}
                     onDoubleClick={() => {
                       onSelect(entry)
                       onOpen(entry)
                     }}
                     className={`
-                      w-full text-left py-2 px-3 rounded flex items-start gap-3 transition-colors
+                      w-full text-left py-3 px-4 rounded flex items-start gap-3 transition-colors
                       ${isSelected
                         ? 'bg-selection'
                         : 'hover:bg-bg/50'
@@ -54,7 +55,7 @@ function TimelineView({ entries, onSelect, selectedEntry, onOpen }) {
                     <span className={`text-xs mt-0.5 ${ENTRY_COLORS[entry.type] || 'text-dim'}`}>
                       [{entry.type}]
                     </span>
-                    <span className={`text-sm flex-1 ${isSelected ? 'text-fg' : 'text-dim'}`}>
+                    <span className={`text-sm flex-1 whitespace-pre-line break-words ${isSelected ? 'text-fg' : 'text-dim'}`}>
                       "{truncate(entry.content, 100)}"
                     </span>
                     <span className="text-dim text-xs whitespace-nowrap">

@@ -13,6 +13,7 @@ export function useCommandPalette({
   onLogout,
   onToggleFilter,
   onToggleTags,
+  onOpenSettings,
 }) {
   const [isOpen, setIsOpen] = useState(false)
   const [query, setQuery] = useState('')
@@ -54,6 +55,15 @@ export function useCommandPalette({
       action: () => {
         setIsOpen(false)
         onSwitchView('timeline')
+      },
+    },
+    {
+      id: 'view-graph',
+      label: 'switch to graph view',
+      shortcut: 'v',
+      action: () => {
+        setIsOpen(false)
+        onSwitchView('graph')
       },
     },
     {
@@ -99,6 +109,14 @@ export function useCommandPalette({
       },
     },
     {
+      id: 'ai-settings',
+      label: 'AI settings (Gemini API)',
+      action: () => {
+        setIsOpen(false)
+        onOpenSettings()
+      },
+    },
+    {
       id: 'logout',
       label: 'logout',
       shortcut: 'q',
@@ -107,7 +125,7 @@ export function useCommandPalette({
         onLogout()
       },
     },
-  ], [onNewEntry, onSwitchView, onExportJson, onExportMd, onToggleTheme, onLogout, onToggleFilter, onToggleTags])
+  ], [onNewEntry, onSwitchView, onExportJson, onExportMd, onToggleTheme, onLogout, onToggleFilter, onToggleTags, onOpenSettings])
 
   // Filter commands based on query (fuzzy match)
   const filteredCommands = useMemo(() => {
