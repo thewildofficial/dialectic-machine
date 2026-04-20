@@ -41,7 +41,7 @@ export const KEYBINDINGS = {
 }
 
 // Supabase configuration — loaded from environment variables
-export const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || 'https://flicspjrrunfujloyipk.supabase.co'
+export const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || ''
 export const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || ''
 
 // Braille art dimensions
