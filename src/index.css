@@ -1,0 +1,90 @@
+@import "tailwindcss";
+
+@theme {
+  --color-bg: #0a0a0a;
+  --color-fg: #c9c9c9;
+  --color-dim: #5c5c5c;
+  --color-accent: #d4a574;
+  --color-type-claim: #d4a574;
+  --color-type-question: #6ba3f7;
+  --color-type-idea: #7ec87e;
+  --color-type-quote: #c792ea;
+  --color-type-reference: #888888;
+  --color-type-opinion: #f78c6c;
+  --color-type-task: #ff5370;
+  --color-type-reflection: #89ddff;
+  --color-tag: #89ddff;
+  --color-source: #c792ea;
+  --color-border: #2a2a2a;
+  --color-selection: #1a1a2e;
+  --font-mono: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html, body, #root {
+  height: 100%;
+  width: 100%;
+  background-color: #0a0a0a;
+  color: #c9c9c9;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 14px;
+  line-height: 1.5;
+  overflow: hidden;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #0a0a0a;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #2a2a2a;
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #3a3a3a;
+}
+
+/* Selection color */
+::selection {
+  background: #1a1a2e;
+  color: #c9c9c9;
+}
+
+/* Blinking cursor animation */
+@keyframes blink {
+  0%, 50% { opacity: 1; }
+  51%, 100% { opacity: 0; }
+}
+
+.cursor-blink {
+  animation: blink 1s step-end infinite;
+}
+
+/* Fade in animation */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.fade-in {
+  animation: fadeIn 0.2s ease-in;
+}
+
+/* Mobile font size adjustment */
+@media (max-width: 768px) {
+  html {
+    font-size: 12px;
+  }
+}
